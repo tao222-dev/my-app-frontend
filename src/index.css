@@ -1,19 +1,27 @@
 *,
 *::before,
 *::after {
+  margin: 0;
+  padding: 0;
   box-sizing: border-box;
 }
 
+html, body {
+  height: 100%;
+}
+
 body {
-  margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
-    'Helvetica Neue', Arial, 'Noto Sans SC', sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+  font-family: "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei",
+               "Noto Sans SC", -apple-system, "Segoe UI", sans-serif;
   background: #090b0c;
   color: #dcd5e5;
+  font-size: 15px;
+  line-height: 1.7;
+  overflow: hidden;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 #root {
-  min-height: 100vh;
+  height: 100%;
 }
