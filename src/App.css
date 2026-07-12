@@ -436,6 +436,78 @@ body.no-motion .modal,
 .switch.active { background: var(--peri); }
 .switch.active::after { transform: translateX(18px); background: var(--lilac); }
 
+/* ---- 设置：自定义 API 区块 ---- */
+.setting-section-title {
+  font-size: 13px; font-weight: 600;
+  color: var(--lilac);
+  padding-top: 10px;
+  margin-top: 4px;
+  border-top: 1px solid var(--lilac-15);
+}
+.setting-section-desc {
+  font-size: 12px; color: var(--lilac-55);
+  margin-bottom: 4px;
+}
+.setting-row-col {
+  flex-direction: column; align-items: stretch; gap: 5px;
+}
+.setting-input {
+  width: 100%;
+  padding: 9px 12px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--lilac-15);
+  background: var(--lilac-08);
+  color: var(--lilac);
+  font-family: inherit; font-size: 13.5px;
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.setting-input::placeholder { color: var(--lilac-55); }
+.setting-input:focus {
+  border-color: var(--peri);
+  box-shadow: 0 0 0 3px var(--peri-15);
+}
+.setting-input-wrap {
+  display: flex; align-items: center; gap: 4px;
+}
+.setting-input-wrap .setting-input { flex: 1; }
+.toggle-vis-btn {
+  flex-shrink: 0;
+  width: 34px; height: 34px;
+  display: grid; place-items: center;
+  border-radius: var(--radius-sm);
+  color: var(--lavender);
+  transition: background 0.15s, color 0.15s;
+}
+.toggle-vis-btn:hover { background: var(--lilac-08); color: var(--lilac); }
+
+/* 模型下拉 */
+.setting-select {
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23b7a8bd' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  padding-right: 36px;
+}
+.setting-select option {
+  background: var(--indigo);
+  color: var(--lilac);
+}
+
+/* 小号旋转加载 */
+.spinner-sm {
+  display: block;
+  width: 16px; height: 16px;
+  border: 2px solid var(--lilac-15);
+  border-top-color: var(--peri);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
 /* ==========================================================
    滚动条 & 响应式
    ========================================================== */

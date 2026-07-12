@@ -15,6 +15,17 @@ function App() {
   const [enterToSend, setEnterToSend] = useState(true)
   const [motionOn, setMotionOn] = useState(true)
   const [search, setSearch] = useState('')
+  // 自定义 API 设置（持久化到 localStorage）
+  const [customApiUrl, setCustomApiUrl] = useState(() => localStorage.getItem('lumen_api_url') || '')
+  const [customApiKey, setCustomApiKey] = useState(() => localStorage.getItem('lumen_api_key') || '')
+  const [customModel, setCustomModel] = useState(() => localStorage.getItem('lumen_api_model') || '')
+  const [showApiKey, setShowApiKey] = useState(false)
+  // 模型列表
+  const [availableModels, setAvailableModels] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('lumen_models') || '[]') } catch { return [] }
+  })
+  const [fetchingModels, setFetchingModels] = useState(false)
+  const [modelsError, setModelsError] = useState('')
   const messagesEndRef = useRef(null)
   const inputRef = useRef(null)
 
@@ -25,6 +36,53 @@ function App() {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
+
+  // 自定义 API 配置持久化
+  useEffect(() => { localStorage.setItem('lumen_api_url', customApiUrl) }, [customApiUrl])
+  useEffect(() => { localStorage.setItem('lumen_api_key', customApiKey) }, [customApiKey])
+  useEffect(() => { localStorage.setItem('lumen_api_model', customModel) }, [customModel])
+
+  // 获取可用模型列表
+  const fetchModels = async () => {
+    const apiUrl = customApiUrl || 'https://api.deepseek.com/v1/chat/completions'
+    const apiKey = customApiKey
+    if (!apiKey) {
+      setAvailableModels([])
+      return
+    }
+    setFetchingModels(true)
+    setModelsError('')
+    try {
+      const res = await fetch(`${API_BASE}/api/models`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ apiUrl, apiKey }),
+      })
+      const data = await res.json()
+      if (data.models?.length) {
+        setAvailableModels(data.models)
+        localStorage.setItem('lumen_models', JSON.stringify(data.models))
+        // 如果当前 model 不在列表中，自动选第一个
+        if (!data.models.includes(customModel)) {
+          const best = data.models.find(m => m.includes('chat') || m.includes('gpt') || m.includes('claude')) || data.models[0]
+          setCustomModel(best)
+        }
+      } else {
+        setModelsError(data.error || '未获取到模型')
+      }
+    } catch {
+      setModelsError('请求失败')
+    } finally {
+      setFetchingModels(false)
+    }
+  }
+
+  // 填完 URL 和 Key 后自动拉取模型列表（带防抖）
+  useEffect(() => {
+    if (!customApiKey) return
+    const timer = setTimeout(fetchModels, 600)
+    return () => clearTimeout(timer)
+  }, [customApiUrl, customApiKey])
 
   // 自动调整输入框高度
   const autoGrow = () => {
@@ -88,10 +146,16 @@ function App() {
     setTimeout(autoGrow, 0)
 
     try {
+      const body = { message: text }
+      // 如果用户在设置中填写了自定义 API，一并传给后端
+      if (customApiUrl) body.apiUrl = customApiUrl
+      if (customApiKey) body.apiKey = customApiKey
+      if (customModel)  body.model  = customModel
+
       const res = await fetch(`${API_BASE}/api/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: text }),
+        body: JSON.stringify(body),
       })
       const data = await res.json()
       const reply = data.reply || data.error || '（未收到回复）'
@@ -216,7 +280,7 @@ function App() {
           </button>
           <div className="chat-title-wrap">
             <h1 className="chat-title">{activeConv ? activeConv.title : '新对话'}</h1>
-            <span className="model-tag">DeepSeek · 深度模式</span>
+            <span className="model-tag">{customModel || 'DeepSeek · 深度模式'}</span>
           </div>
           <div className="head-actions">
             <button className="icon-btn" title="分享对话">
@@ -330,6 +394,97 @@ function App() {
               aria-checked={motionOn}
               onClick={() => setMotionOn(!motionOn)}
             ></button>
+          </div>
+
+          {/* ---- 自定义 API ---- */}
+          <div className="setting-section-title">自定义 API</div>
+          <p className="setting-section-desc">留空则使用默认 DeepSeek 接口</p>
+
+          <div className="setting-row setting-row-col">
+            <label className="setting-label" htmlFor="api-url">接口地址</label>
+            <input
+              id="api-url"
+              className="setting-input"
+              type="url"
+              placeholder="https://api.deepseek.com/v1/chat/completions"
+              value={customApiUrl}
+              onChange={e => setCustomApiUrl(e.target.value)}
+            />
+          </div>
+
+          <div className="setting-row setting-row-col">
+            <label className="setting-label" htmlFor="api-model">模型名称</label>
+            {availableModels.length > 0 ? (
+              <div className="setting-input-wrap">
+                <select
+                  id="api-model"
+                  className="setting-input setting-select"
+                  value={customModel}
+                  onChange={e => setCustomModel(e.target.value)}
+                >
+                  {availableModels.map(m => (
+                    <option key={m} value={m}>{m}</option>
+                  ))}
+                </select>
+                <button
+                  className="icon-btn toggle-vis-btn"
+                  onClick={fetchModels}
+                  disabled={fetchingModels}
+                  title="刷新模型列表"
+                >
+                  <svg viewBox="0 0 24 24" style={fetchingModels ? {animation: 'spin 0.8s linear infinite'} : {}}><path d="M1 4v6h6M23 20v-6h-6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                </button>
+              </div>
+            ) : (
+              <div className="setting-input-wrap">
+                <input
+                  id="api-model"
+                  className="setting-input"
+                  type="text"
+                  placeholder="deepseek-chat"
+                  value={customModel}
+                  onChange={e => setCustomModel(e.target.value)}
+                />
+                <button
+                  className="icon-btn toggle-vis-btn"
+                  onClick={fetchModels}
+                  disabled={fetchingModels || !customApiKey}
+                  title="获取模型列表"
+                >
+                  {fetchingModels ? (
+                    <span className="spinner-sm"></span>
+                  ) : (
+                    <svg viewBox="0 0 24 24"><path d="M21 21l-6-6m2-5a7 7 0 1 1-14 0 7 7 0 0 1 14 0z" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
+                  )}
+                </button>
+              </div>
+            )}
+            {modelsError && <span className="setting-desc" style={{color: '#e0567a'}}>{modelsError}</span>}
+          </div>
+
+          <div className="setting-row setting-row-col">
+            <label className="setting-label" htmlFor="api-key">API Key</label>
+            <div className="setting-input-wrap">
+              <input
+                id="api-key"
+                className="setting-input"
+                type={showApiKey ? 'text' : 'password'}
+                placeholder="sk-..."
+                value={customApiKey}
+                onChange={e => setCustomApiKey(e.target.value)}
+              />
+              <button
+                className="icon-btn toggle-vis-btn"
+                onClick={() => setShowApiKey(!showApiKey)}
+                title={showApiKey ? '隐藏' : '显示'}
+              >
+                {showApiKey ? (
+                  <svg viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" fill="none" stroke="currentColor" strokeWidth="2"/><circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" strokeWidth="2"/></svg>
+                ) : (
+                  <svg viewBox="0 0 24 24"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><line x1="1" y1="1" x2="23" y2="23" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"/></svg>
+                )}
+              </button>
+            </div>
           </div>
         </div>
       </div>
